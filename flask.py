@@ -1,33 +1,19 @@
-
-import requests
-from flask import Flask, render_template, request, redirect, jsonify
+from flask import Flask
+from api import api_bp
+import os
+from pymongo import MongoClient
 
 app = Flask(__name__)
-API_BASE_URL = "http://localhost:5000"
 
-@app.route("/")
-def index():
-    response = requests.get(f"{API_BASE_URL}/items")
-    items = response.json()
-    return render_template("index.html", items=items)
+# Configuración de MongoDB usando variables de entorno
+app.config['MONGO_URI'] = os.getenv('MONGO_URI', 'mongodb://localhost:27017/mydatabase')
 
-@app.route("/add", methods=["POST"])
-def add_item():
-    item_data = {
-        "id": request.form["id"],
-        "name": request.form["name"]
-    }
-    response = requests.post(f"{API_BASE_URL}/items", json=item_data)
-    if response.status_code == 201:
-        return redirect("/")
-    return jsonify({"error": "Failed to add item"}), 400
+# Conectar a MongoDB
+client = MongoClient(app.config['MONGO_URI'])
+db = client.get_database()
 
-@app.route("/delete/<string:item_id>")
-def delete_item(item_id):
-    response = requests.delete(f"{API_BASE_URL}/items/{item_id}")
-    if response.status_code == 200:
-        return redirect("/")
-    return jsonify({"error": "Failed to delete item"}), 400
+# Registrar las rutas API
+app.register_blueprint(api_bp, url_prefix='/api')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
